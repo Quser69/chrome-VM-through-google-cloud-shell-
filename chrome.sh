@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# Install Google Chrome
+sudo apt-get update
+sudo apt-get install -y google-chrome-stable
+
+# Install VNC server
+sudo apt-get install -y tightvncserver
+
+# Start VNC server and set password
+vncserver :1
+
 # Install ngrok
 wget -O ngrok.zip https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
 unzip ngrok.zip
@@ -15,20 +25,10 @@ clear
 echo "Ngrok setup completed!"
 
 # Start ngrok tunnel in the background and redirect output to a log file
-echo "Choose ngrok region (for better connection):"
-echo "us - United States (Ohio)"
-echo "eu - Europe (Frankfurt)"
-echo "ap - Asia/Pacific (Singapore)"
-echo "au - Australia (Sydney)"
-echo "sa - South America (Sao Paulo)"
-echo "jp - Japan (Tokyo)"
-echo "in - India (Mumbai)"
-read -p "Enter ngrok region: " REGION
-
-./ngrok tcp --region $REGION 4000 > ngrok.log 2>&1 &
+echo "Starting ngrok tunnel..."
+./ngrok tcp 5901 > ngrok.log &
 
 # Wait for ngrok tunnel to start
-echo "Starting ngrok tunnel..."
 sleep 10
 
 # Retrieve ngrok tunnel URL from the log file
@@ -38,22 +38,14 @@ NGROK_URL=$(grep -o "tcp://[^[:space:]]*" ngrok.log)
 clear
 echo "Ngrok Tunnel Information:"
 echo "URL: $NGROK_URL"
-echo "Use this URL to connect to your VM via ngrok."
+echo "Use this URL to connect via NoVNC."
 
-# Chrome virtual machine installation
-docker run --rm -d --network host --privileged --name chrome-browser -e PASSWORD=123456 -e USER=user --cap-add=SYS_PTRACE --shm-size=1g alpine /bin/sh -c "apk add --no-cache chromium && /usr/bin/chromium-browser --no-sandbox"
+# Connect to the Google Chrome instance using NoVNC
+echo "Connecting to Google Chrome instance..."
+noVNC/utils/launch.sh --vnc $NGROK_URL
 
-clear
-echo "Google Chrome Installed Successfully!"
-echo "Access your Chrome virtual machine via NoMachine."
-echo "NoMachine: https://www.nomachine.com/download"
-echo "======================="
-echo "NoMachine Information:"
-echo "IP Address:"
-curl --silent --show-error http://127.0.0.1:4040/api/tunnels | sed -nE 's/.*public_url":"tcp:..([^"]*).*/\1/p'
-echo "User: user"
-echo "Password: 123456"
-echo "If the VM can't connect, restart Cloud Shell and then re-run the script."
+# Cleanup
+pkill Xtightvnc
+rm -rf ~/.vnc
 
-# Keep the script running to maintain the ngrok tunnel
-while true; do sleep 10; done
+echo "Script execution completed."
