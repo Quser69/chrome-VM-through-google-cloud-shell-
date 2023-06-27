@@ -1,51 +1,37 @@
 #!/bin/bash
 
-# Install Google Chrome
+clear
+echo "Installing Chrome and setting up NoVNC..."
+
+# Install dependencies
 sudo apt-get update
-sudo apt-get install -y google-chrome-stable
+sudo apt-get install -y wget xvfb x11vnc novnc
 
-# Install VNC server
-sudo apt-get install -y tightvncserver
+# Download and install Chrome
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo dpkg -i google-chrome-stable_current_amd64.deb
+sudo apt-get install -y -f
+rm google-chrome-stable_current_amd64.deb
 
-# Start VNC server and set password
-vncserver :1
+# Start virtual display
+Xvfb :1 -screen 0 1024x768x16 &
+export DISPLAY=:1
 
-# Install ngrok
-wget -O ngrok.zip https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
-unzip ngrok.zip
-chmod +x ngrok
+# Start Chrome
+google-chrome-stable --no-sandbox &
 
-# Authenticate ngrok
+# Start NoVNC server
+x11vnc -display :1 -nopw -listen localhost -xkb -bg -ncache 10 -forever &
+
+# Start NoVNC web interface
+nohup novnc --listen 8080 >/dev/null 2>&1 &
+
+# Get public IP address
+IP_ADDRESS=$(curl -s ifconfig.me)
+
 clear
-echo "Go to: https://dashboard.ngrok.com/get-started/your-authtoken"
-read -p "Paste Ngrok Authtoken: " CRP
-./ngrok authtoken $CRP
-
-clear
-echo "Ngrok setup completed!"
-
-# Start ngrok tunnel in the background and redirect output to a log file
-echo "Starting ngrok tunnel..."
-./ngrok tcp 5901 > ngrok.log &
-
-# Wait for ngrok tunnel to start
-sleep 10
-
-# Retrieve ngrok tunnel URL from the log file
-NGROK_URL=$(grep -o "tcp://[^[:space:]]*" ngrok.log)
-
-# Output ngrok tunnel information
-clear
-echo "Ngrok Tunnel Information:"
-echo "URL: $NGROK_URL"
-echo "Use this URL to connect via NoVNC."
-
-# Connect to the Google Chrome instance using NoVNC
-echo "Connecting to Google Chrome instance..."
-noVNC/utils/launch.sh --vnc $NGROK_URL
-
-# Cleanup
-pkill Xtightvnc
-rm -rf ~/.vnc
+echo "Chrome installation and NoVNC setup completed!"
+echo "You can now connect to the Chrome instance using the following URL:"
+echo "http://$IP_ADDRESS:8080/vnc.html"
 
 echo "Script execution completed."
