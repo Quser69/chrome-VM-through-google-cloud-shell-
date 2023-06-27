@@ -14,7 +14,7 @@ read -p "Paste Ngrok Authtoken: " CRP
 clear
 echo "Ngrok setup completed!"
 
-# Start ngrok tunnel
+# Start ngrok tunnel in the background and redirect output to a log file
 echo "Choose ngrok region (for better connection):"
 echo "us - United States (Ohio)"
 echo "eu - Europe (Frankfurt)"
@@ -25,14 +25,14 @@ echo "jp - Japan (Tokyo)"
 echo "in - India (Mumbai)"
 read -p "Enter ngrok region: " REGION
 
-./ngrok tcp --region $REGION 4000 &
+./ngrok tcp --region $REGION 4000 > ngrok.log 2>&1 &
 
 # Wait for ngrok tunnel to start
 echo "Starting ngrok tunnel..."
 sleep 10
 
-# Retrieve ngrok tunnel URL
-NGROK_URL=$(curl --silent --show-error http://127.0.0.1:4040/api/tunnels | sed -nE 's/.*public_url":"tcp:..([^"]*).*/\1/p')
+# Retrieve ngrok tunnel URL from the log file
+NGROK_URL=$(grep -o "tcp://[^[:space:]]*" ngrok.log)
 
 # Output ngrok tunnel information
 clear
